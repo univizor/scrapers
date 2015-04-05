@@ -1,9 +1,9 @@
 import sys
 
-import eprints
+import eprints2 as eprints
 
-URL_BASE = 'http://pefprints.pef.uni-lj.si/'
-YEARS = range(2000, 2016)
+URL_BASE = 'http://drugg.fgg.uni-lj.si/'
+YEARS = range(1990, 2016)
 DL_DIR = './docs/'
 
 			
@@ -13,7 +13,7 @@ if __name__ == '__main__':
 		print ('Scraping year', year)
 		for thesis_url in eprints.get_url_list(year, URL_BASE):
 			try:
-				eprints.extract(thesis_url, 'PEF', 'UL, Pedagoska fakulteta')
+				eprints.extract(thesis_url, 'FGG', 'UL, Fakulteta za gradbenistvo in geodezijo')
 			except:
-				pass
+				raise
 
