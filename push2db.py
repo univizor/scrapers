@@ -17,18 +17,27 @@ import MySQLdb as mdb
 
 import settings
 
-SQL_INSERT = "INSERT INTO docDB (url, avtor, naslov, leto, fakulteta, data, filename) VALUES (%s, %s, %s, %s, %s, %s, '');"
-SQL_UPDATE_FILENAME = "UPDATE docDB SET filename=%s WHERE id = %s;"
+SQL_INSERT = u"INSERT INTO docDB (url, avtor, naslov, leto, fakulteta, data, filename) VALUES (%s, %s, %s, %s, %s, %s, '');"
+SQL_UPDATE_FILENAME = u"UPDATE docDB SET filename=%s WHERE id = %s;"
+SQL_EXISTS = u"SELECT * FROM docDB WHERE url = %s;"
 
 def push(path, source, *fields):
-	conn = mdb.connect(settings.DB_HOST, settings.DB_USER, settings.DB_PASS, settings.DB_DATABASE)
+	conn = mdb.connect(settings.DB_HOST, settings.DB_USER,
+					   settings.DB_PASS, settings.DB_DATABASE,
+					   charset='utf8')
 	with conn:
 		cur = conn.cursor()
+
+		cur.execute(SQL_EXISTS, (fields[0], ))
+		if len(cur.fetchall()):
+			return
+		
 		cur.execute(SQL_INSERT, fields)
 		doc_id = cur.lastrowid
 		filename = '{}.{}'.format(doc_id, path.split('.')[-1])
-		os.rename(path, os.path.join(settings.DOC_PATH, source, filename))
-		cur.execute(SQL_UPDATE_FILENAME, (filename, doc_id))
+		new_path = os.path.join(settings.DOC_PATH, source, filename)
+		os.rename(path, new_path)
+		cur.execute(SQL_UPDATE_FILENAME, (new_path, doc_id))
 	
 
 if __name__ == '__main__':
@@ -37,4 +46,4 @@ if __name__ == '__main__':
 	meta = '{}'
 	if len(sys.argv) > 8:
 		meta = sys.argv[8]
-	push(os.path.expanduser(filename), source, url, author, title, year, school, meta)
+	push(os.path.expanduser(filename), source, url, author.decode('utf-8'), title.decode('utf-8'), year, school.decode('utf-8'), meta)
