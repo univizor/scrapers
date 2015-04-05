@@ -17,9 +17,9 @@ import MySQLdb as mdb
 
 import settings
 
-SQL_INSERT = "INSERT INTO docDB (url, avtor, naslov, leto, fakulteta, data, filename) VALUES (%s, %s, %s, %s, %s, %s, '');"
-SQL_UPDATE_FILENAME = "UPDATE docDB SET filename=%s WHERE id = %s;"
-SQL_EXISTS = "SELECT * FROM docDB WHERE url = %s;"
+SQL_INSERT = u"INSERT INTO docDB (url, avtor, naslov, leto, fakulteta, data, filename) VALUES (%s, %s, %s, %s, %s, %s, '');"
+SQL_UPDATE_FILENAME = u"UPDATE docDB SET filename=%s WHERE id = %s;"
+SQL_EXISTS = u"SELECT * FROM docDB WHERE url = %s;"
 
 def push(path, source, *fields):
 	conn = mdb.connect(settings.DB_HOST, settings.DB_USER, settings.DB_PASS, settings.DB_DATABASE)
