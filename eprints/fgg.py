@@ -3,7 +3,7 @@ import sys
 import eprints2 as eprints
 
 URL_BASE = 'http://drugg.fgg.uni-lj.si/'
-YEARS = range(2013, 2016)
+YEARS = range(1990, 2016)
 DL_DIR = './docs/'
 
 			
