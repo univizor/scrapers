@@ -55,9 +55,10 @@ class Thesis(dict):
 			self['school']
 		)
 		p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
+		out = p.stdout.read()
 		p.communicate()
 		if p.returncode > 0:
-			print p.stdout.read()
+			print out
 			exit(1)
 
 def get_url_list(y, url_base):

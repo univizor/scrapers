@@ -19,11 +19,17 @@ import settings
 
 SQL_INSERT = "INSERT INTO docDB (url, avtor, naslov, leto, fakulteta, data, filename) VALUES (%s, %s, %s, %s, %s, %s, '');"
 SQL_UPDATE_FILENAME = "UPDATE docDB SET filename=%s WHERE id = %s;"
+SQL_EXISTS = "SELECT * FROM docDB WHERE url = %s;"
 
 def push(path, source, *fields):
 	conn = mdb.connect(settings.DB_HOST, settings.DB_USER, settings.DB_PASS, settings.DB_DATABASE)
 	with conn:
 		cur = conn.cursor()
+
+		cur.execute(SQL_EXISTS, (fields[0], ))
+		if len(cur.fetchall()):
+			return
+		
 		cur.execute(SQL_INSERT, fields)
 		doc_id = cur.lastrowid
 		filename = '{}.{}'.format(doc_id, path.split('.')[-1])
