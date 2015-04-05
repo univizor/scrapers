@@ -22,6 +22,7 @@ DL_DIR = './docs/'
 SKIP = (
 	'FRI',
 	'PEF',
+	'FGG',
 )
 
 class Thesis(dict):
