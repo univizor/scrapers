@@ -30,6 +30,7 @@ def push(path, source, *fields):
 
 		cur.execute(SQL_EXISTS, (fields[0], ))
 		if len(cur.fetchall()):
+			os.remove(path)
 			return
 		
 		cur.execute(SQL_INSERT, fields)

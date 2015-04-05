@@ -15,5 +15,5 @@ if __name__ == '__main__':
 			try:
 				eprints.extract(thesis_url, 'PEF', 'UL, Pedagoska fakulteta')
 			except:
-				raise
+				pass
 

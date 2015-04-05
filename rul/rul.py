@@ -1,6 +1,6 @@
 import re
 import sys
-import json
+import subprocess
 import os
 
 import requests
@@ -12,9 +12,17 @@ CATEGORIES = {
 	'en': 'kat1=jezik&kat2=1033&',
 }
 
+URL_META = 'https://repozitorij.uni-lj.si/Export.php?id={id}&lang=slv'
 URL_BASE = 'https://repozitorij.uni-lj.si/'
 URI_LIST = '{base}Brskanje2.php?{category}page={page}' # this is just the slovenian list, TODO: english
+
 DL_DIR = './docs/'
+#DL_DIR = '/mnt/univizor/download/'
+
+SKIP = (
+	'FRI',
+	'PEF',
+)
 
 class Thesis(dict):
 	def __hash__(self):
@@ -40,18 +48,32 @@ class Thesis(dict):
 			return
 		with open(local_filename, 'wb') as f:
 			f.write(r.content)
+		self.filename = local_filename
 		return True
 
 	def store_meta(self):
-		local_filename = DL_DIR + self.get_filename('json')
-		with open(local_filename, 'w') as f:
-			f.write(json.dumps(self))
+		command = u'./push2db.py "{}" "{}" "{}" "{}" "{}" "{}" "{}"'.format(
+			self.filename,
+			self.source,
+			self['url'],
+			self['author'],
+			self['title'],
+			self['year'],
+			self['school']
+		)
+		p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
+		out = p.stdout.read()
+		p.communicate()
+		if p.returncode > 0:
+			print out
+			exit(1)
 
 def extract(response_html):
 	item_list = set()
 	soup = bs4.BeautifulSoup(response_html)
 	for item in soup.select('table.ZadetkiIskanja .Besedilo'):
 		thesis = Thesis()
+		thesis.source = 'RUL'
 		thesis['keywords'] = []
 		for a in item.select('a'):
 			if 'stl0=KljucneBesede' in a['href']:
@@ -62,6 +84,20 @@ def extract(response_html):
 				thesis['url'] = URL_BASE + a['href']
 			elif 'IzpisGradiva.php?id=30689&lang=slv':
 				thesis['title'] = a.get_text()
+		thesis_id = thesis['url'].split('Dokument.php?id=')[-1].split('&')[0]
+
+		meta = bs4.BeautifulSoup(requests.get(URL_META.format(id=thesis_id)).content.decode('utf-8'))
+		thesis_type = meta.select('vrstagradiva')
+		if not thesis_type:
+			continue
+		if 'delo/naloga' not in thesis_type[0].get_text():
+			continue
+		org = meta.select('organizacija')[0]
+		if org['kratica'] in SKIP:
+			continue
+		org_text = org.get_text()
+		thesis['year'] = meta.select('letoizida')[0].get_text()
+		thesis['school'] = 'UL, ' + org_text
 		if thesis.download():
 			thesis.store_meta()
 			item_list.add(thesis)
