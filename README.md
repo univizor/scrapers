@@ -20,4 +20,4 @@
 
 ## Output
 1. PDF file
-2. JSON file with meta information: author, title, keywords, year
+2. JSON file with meta information: **author**, **title**, **keywords**, **year**, **university/faculty/school**, **url**
