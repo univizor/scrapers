@@ -88,7 +88,7 @@ def extract(url, source, school=None):
 
 	thesis['title'] = soup.select('h1')[0].get_text()
 	for bar in soup.select('.ep_summary_content_main'):
-		thesis['year'] = re.findall(r'[0-9]{4}', bar.get_text())[0][1:6]
+		thesis['year'] = re.findall(r'[0-9]{4}', bar.get_text())[0]
 		break
 	
 	for author in soup.select('.ep_summary_content .person_name'):
