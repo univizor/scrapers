@@ -1,0 +1,9 @@
+# Univizor Scrapers
+
+[List of all entities (Google Document)](https://docs.google.com/spreadsheets/d/1LdW-V_vTOMh38zqivm0EAIiUXhTjtd6kKb3iXUDRyto/edit#gid=0)
+
+| Entity      | Language | Owner      |
+|-------------|----------|------------|
+| [up](up/)   | Perl     | @igzebedze |
+| [mb](mb/)   | Perl     | @igzebedze |
+| [ung](ung/) | Perl     | @igzebedze |
