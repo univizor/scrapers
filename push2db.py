@@ -22,7 +22,9 @@ SQL_UPDATE_FILENAME = u"UPDATE docDB SET filename=%s WHERE id = %s;"
 SQL_EXISTS = u"SELECT * FROM docDB WHERE url = %s;"
 
 def push(path, source, *fields):
-	conn = mdb.connect(settings.DB_HOST, settings.DB_USER, settings.DB_PASS, settings.DB_DATABASE)
+	conn = mdb.connect(settings.DB_HOST, settings.DB_USER,
+					   settings.DB_PASS, settings.DB_DATABASE,
+					   charset='utf8')
 	with conn:
 		cur = conn.cursor()
 
