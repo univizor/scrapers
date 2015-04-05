@@ -4,6 +4,9 @@
 Usage:
 	./push2db.py DOC_PATH SOURCE URL AUTHOR TITLE YEAR SCHOOL [META]
 
+Example:
+	./push2db.py something.pdf FRI www 'Someone' 'Something' 2015 'Faculty of Computer and Information Science'
+
 Meta information is read from stdin because it can contain just about anything.
     
 """
