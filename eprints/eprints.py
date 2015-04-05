@@ -65,7 +65,8 @@ def get_url_list(y, url_base):
 	url_list = set()
 	url = '{}view/year/{}.html'.format(url_base, y)
 	response = requests.get(url)
-	soup = bs4.BeautifulSoup(response.content.decode('utf-8'))
+	content = response.content.decode('utf-8')
+	soup = bs4.BeautifulSoup(content)
 	for item in soup.select('.ep_view_page_view_year p'):
 		try:
 			url = item.select('a')[0]['href']
@@ -73,6 +74,21 @@ def get_url_list(y, url_base):
 				url_list.add(url)
 		except:
 			pass
+	if len(url_list) == 0:
+		start = 0
+		while True:
+			try:
+				ind_url = content.index(url_base, start)
+				ind_url_num = ind_url + len(url_base)
+				ind_url_end = content.index('/', ind_url_num)
+				if content[ind_url_num:ind_url_end].isdigit():
+					url_list.add(content[ind_url:ind_url_end])
+				start = ind_url_end + 1
+			except ValueError:
+				break
+			
+			
+	print url_list
 	return url_list
 
 def extract(url, source, school=None):
