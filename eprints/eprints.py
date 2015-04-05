@@ -7,7 +7,7 @@ import requests
 import bs4
 from slugify import slugify
 
-DL_DIR = './docs/'
+DL_DIR = '/mnt/univizor/download/'
 
 class Thesis(dict):
 	def __hash__(self):
