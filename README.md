@@ -7,3 +7,17 @@
 | [up](up/)   | Perl     | @igzebedze |
 | [mb](mb/)   | Perl     | @igzebedze |
 | [ung](ung/) | Perl     | @igzebedze |
+
+# Installation
+
+## Python
+
+    mkvirtualenv --no-site-packages univizor
+    workon univizor
+    pip install --upgrade -r requirements.txt
+
+# Pipeline
+
+## Output
+1. PDF file
+2. JSON file with meta information: author, title, keywords, year
