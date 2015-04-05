@@ -37,4 +37,4 @@ if __name__ == '__main__':
 	meta = '{}'
 	if len(sys.argv) > 8:
 		meta = sys.argv[8]
-	push(os.path.expanduser(filename), source, url, author, title, year, school, meta)
+	push(os.path.expanduser(filename), source, url, author.decode('utf-8'), title.decode('utf-8'), year, school.decode('utf-8'), meta)

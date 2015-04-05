@@ -1,14 +1,12 @@
 import re
-import sys
 import json
 import os
+import subprocess
 
 import requests
 import bs4
 from slugify import slugify
 
-URL_BASE = 'http://pefprints.pef.uni-lj.si/'
-YEARS = range(2000, 2016)
 DL_DIR = './docs/'
 
 class Thesis(dict):
@@ -23,6 +21,8 @@ class Thesis(dict):
 		)
 
 	def download(self):
+		if 'url' not in self:
+			return False
 		r = requests.get(self['url'], stream=True)
 		try:
 			ext = re.findall(r'filename=.*',
@@ -35,35 +35,61 @@ class Thesis(dict):
 			return
 		with open(local_filename, 'wb') as f:
 			f.write(r.content)
+		self.filename = local_filename
 		return True
 
+	def get_meta(self):
+		return json.dumps({
+			key: val for key, val in self.items()
+			if key not in ('author', 'title', 'year', 'school', )
+		})
+	
 	def store_meta(self):
-		local_filename = DL_DIR + self.get_filename('json')
-		with open(local_filename, 'w') as f:
-			f.write(json.dumps(self))
+		command = u'./push2db.py "{}" "{}" "{}" "{}" "{}" "{}" "{}"'.format(
+			self.filename,
+			self.source,
+			self['url'],
+			self['author'],
+			self['title'],
+			self['year'],
+			self['school']
+		)
+		p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
+		p.communicate()
+		if p.returncode > 0:
+			print p.stdout.read()
+			exit(1)
 
-def get_url_list(y):
+def get_url_list(y, url_base):
 	url_list = set()
-	url = '{}view/year/{}.html'.format(URL_BASE, y)
+	url = '{}view/year/{}.html'.format(url_base, y)
 	response = requests.get(url)
 	soup = bs4.BeautifulSoup(response.content.decode('utf-8'))
 	for item in soup.select('.ep_view_page_view_year p'):
 		try:
 			url = item.select('a')[0]['href']
-			if re.match(r'{}\d+/'.format(URL_BASE), url):
+			if re.match(r'{}\d+/'.format(url_base), url):
 				url_list.add(url)
 		except:
 			pass
 	return url_list
 
-def extract(url):
+def extract(url, source, school=None):
 	response = requests.get(url)
 	soup = bs4.BeautifulSoup(response.content.decode('utf-8'))
+
 	thesis = Thesis()
+	thesis.source = source
+	if school:
+		thesis['school'] = school
 
 	thesis['keywords'] = []
 
 	thesis['title'] = soup.select('h1')[0].get_text()
+	for bar in soup.select('.ep_summary_content_main'):
+		thesis['year'] = re.findall(r'[0-9]{4}', bar.get_text())[0][1:6]
+		break
+	
 	for author in soup.select('.ep_summary_content .person_name'):
 		thesis['author'] = author.get_text()
 		break
@@ -71,24 +97,19 @@ def extract(url):
 		if 'Download' in anchor.get_text():
 			thesis['url'] = anchor['href']
 			break
-	for row in soup.select('table tr'):
+	for row in soup.select('table table tr'):
 		if not row.select('th'):
 			continue
 		row_header = row.select('th')[0].get_text()
+		if 'Item Type:' in row_header or 'Tip vnosa:' in row_header:
+			row_content = row.select('td')[0].get_text()
+			if 'Thesis' not in row_content and 'Delo' not in row_content:
+				return # lets break
 		if 'ne besede:' in row_header or 'Keywords:' in row_header:
-			thesis['keywords'] = row.select('td')[0].get_text().split(', ')
-			break
+			thesis['keywords'] = [
+				elt.encode('utf-8') for elt in row.select('td')[0].get_text().split(', ')
+			]
 	
 	if thesis.download():
 		thesis.store_meta()
 	
-			
-if __name__ == '__main__':
-	start = YEARS.index(int(sys.argv[-1]) if len(sys.argv) > 1 else YEARS[0])
-	for year in YEARS[start:]:
-		print ('Scraping year', year)
-		for thesis_url in get_url_list(year):
-			try:
-				extract(thesis_url)
-			except:
-				raise
