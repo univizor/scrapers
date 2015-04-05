@@ -47,7 +47,8 @@ foreach my $line (readpipe("cat list.txt")) {
 				my $document = $4;
 				my $title = $1;
 				my $detailsurl;
-				print "$what\t$who\t$where\t$title\t$author\t$year\t$home$document\n";
+				// print "$what\t$who\t$where\t$title\t$author\t$year\t$home$document\n";
+				
 
 				my $slug = &slugify("$author-$year");
 				if (!-f "docs/$slug.pdf") {
@@ -58,6 +59,7 @@ foreach my $line (readpipe("cat list.txt")) {
 					warn $key;
 # 2. fetch the document using the cookie
 					system("curl -L -s -b lccookie -d 'key=$key' '$home$document' > 'docs/$slug.pdf'") if $key;
+					
 					sleep 1;
 				}
 			} else { warn 'bla'; }
