@@ -35,8 +35,9 @@ def push(path, source, *fields):
 		cur.execute(SQL_INSERT, fields)
 		doc_id = cur.lastrowid
 		filename = '{}.{}'.format(doc_id, path.split('.')[-1])
-		os.rename(path, os.path.join(settings.DOC_PATH, source, filename))
-		cur.execute(SQL_UPDATE_FILENAME, (filename, doc_id))
+		new_path = os.path.join(settings.DOC_PATH, source, filename)
+		os.rename(path, new_path)
+		cur.execute(SQL_UPDATE_FILENAME, (new_path, doc_id))
 	
 
 if __name__ == '__main__':
