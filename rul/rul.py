@@ -84,13 +84,16 @@ def extract_one(item):
 	for a in item.select('a'):
 		if 'stl0=KljucneBesede' in a['href']:
 			thesis['keywords'].append(a.get_text())
-		elif 'stl0=Avtor' in a['href']:
+		elif 'stl0=Avtor' in a['href'] and 'author' not in thesis:
 			thesis['author'] = a.get_text()
 		elif 'Dokument.php' in a['href']:
 			thesis['url'] = URL_BASE + a['href']
 		elif 'IzpisGradiva.php?id=30689&lang=slv':
 			thesis['title'] = a.get_text()
+			thesis['source_url'] = a['href']
 
+	if 'author' not in thesis:
+		return
 	thesis_id = thesis['url'].split('Dokument.php?id=')[-1].split('&')[0]
 
 	meta = bs4.BeautifulSoup(requests.get(URL_META.format(id=thesis_id)).content.decode('utf-8'))
