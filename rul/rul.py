@@ -16,8 +16,8 @@ URL_META = 'https://repozitorij.uni-lj.si/Export.php?id={id}&lang=slv'
 URL_BASE = 'https://repozitorij.uni-lj.si/'
 URI_LIST = '{base}Brskanje2.php?{category}page={page}' # this is just the slovenian list, TODO: english
 
-DL_DIR = './docs/'
-#DL_DIR = '/mnt/univizor/download/'
+#DL_DIR = './docs/'
+DL_DIR = '/mnt/univizor/download/'
 
 SKIP = (
 	'FRI', # FRI
