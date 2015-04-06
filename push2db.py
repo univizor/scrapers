@@ -37,8 +37,12 @@ def push(path, source, *fields):
 		doc_id = cur.lastrowid
 		filename = '{}.{}'.format(doc_id, path.split('.')[-1])
 		new_path = os.path.join(settings.DOC_PATH, source, filename)
-		os.rename(path, new_path)
-		cur.execute(SQL_UPDATE_FILENAME, (new_path, doc_id))
+		try:
+			os.rename(path, new_path)
+			cur.execute(SQL_UPDATE_FILENAME, (new_path, doc_id))
+		except:
+			print path, '->', new_path
+			raise
 	
 
 if __name__ == '__main__':
