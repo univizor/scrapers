@@ -17,7 +17,7 @@ URL_BASE = 'https://repozitorij.uni-lj.si/'
 URI_LIST = '{base}Brskanje2.php?{category}page={page}' # this is just the slovenian list, TODO: english
 
 #DL_DIR = './docs/'
-DL_DIR = '/mnt/univizor/download/'
+DL_DIR = os.environ.get('SCRAPER_TMP_DOC') or '/mnt/univizor/download/'
 
 SKIP = (
 	'FRI', # FRI
@@ -25,6 +25,9 @@ SKIP = (
 	'FGG', # Gradbenistvo
 	'FFA', # Farmacija
 )
+EXTs = {
+	'application/pdf': 'pdf',
+}
 
 class Thesis(dict):
 	def __hash__(self):
@@ -40,11 +43,15 @@ class Thesis(dict):
 	def download(self):
 		r = requests.get(self['url'], stream=True)
 		try:
+			
 			ext = re.findall(r'filename=.*',
 							 r.headers['Content-Disposition'])[0].split('=')[1].split('.')[-1]
 		except:
-			print('Failed url:', self['url'])
-			return False
+			ct = r.headers.get('content-type')
+			if ct not in EXTs:
+				print('Failed url:', self['url'])
+				return False
+			ext = EXTs[ct]
 		local_filename = (DL_DIR + self.get_filename(ext))
 		if os.path.exists(local_filename):
 			return
@@ -70,39 +77,49 @@ class Thesis(dict):
 			print out
 			exit(1)
 
+def extract_one(item):
+	thesis = Thesis()
+	thesis.source = 'RUL'
+	thesis['keywords'] = []
+	for a in item.select('a'):
+		if 'stl0=KljucneBesede' in a['href']:
+			thesis['keywords'].append(a.get_text())
+		elif 'stl0=Avtor' in a['href']:
+			thesis['author'] = a.get_text()
+		elif 'Dokument.php' in a['href']:
+			thesis['url'] = URL_BASE + a['href']
+		elif 'IzpisGradiva.php?id=30689&lang=slv':
+			thesis['title'] = a.get_text()
+
+	thesis_id = thesis['url'].split('Dokument.php?id=')[-1].split('&')[0]
+
+	meta = bs4.BeautifulSoup(requests.get(URL_META.format(id=thesis_id)).content.decode('utf-8'))
+	thesis_type = meta.select('vrstagradiva')
+	if not thesis_type:
+		return
+	if 'delo/naloga' not in thesis_type[0].get_text():
+		return
+	org = meta.select('organizacija')[0]
+	if org['kratica'] in SKIP:
+		return
+	org_text = org.get_text()
+	thesis['year'] = meta.select('letoizida')[0].get_text()
+	thesis['school'] = 'UL, ' + org_text
+	return thesis
+
 def extract(response_html):
 	item_list = set()
 	soup = bs4.BeautifulSoup(response_html)
 	for item in soup.select('table.ZadetkiIskanja .Besedilo'):
-		thesis = Thesis()
-		thesis.source = 'RUL'
-		thesis['keywords'] = []
-		for a in item.select('a'):
-			if 'stl0=KljucneBesede' in a['href']:
-				thesis['keywords'].append(a.get_text())
-			elif 'stl0=Avtor' in a['href']:
-				thesis['author'] = a.get_text()
-			elif 'Dokument.php' in a['href']:
-				thesis['url'] = URL_BASE + a['href']
-			elif 'IzpisGradiva.php?id=30689&lang=slv':
-				thesis['title'] = a.get_text()
-		thesis_id = thesis['url'].split('Dokument.php?id=')[-1].split('&')[0]
-
-		meta = bs4.BeautifulSoup(requests.get(URL_META.format(id=thesis_id)).content.decode('utf-8'))
-		thesis_type = meta.select('vrstagradiva')
-		if not thesis_type:
-			continue
-		if 'delo/naloga' not in thesis_type[0].get_text():
-			continue
-		org = meta.select('organizacija')[0]
-		if org['kratica'] in SKIP:
-			continue
-		org_text = org.get_text()
-		thesis['year'] = meta.select('letoizida')[0].get_text()
-		thesis['school'] = 'UL, ' + org_text
-		if thesis.download():
-			thesis.store_meta()
-			item_list.add(thesis)
+		try:
+			thesis = extract_one(item)
+			if not thesis:
+				continue
+			if thesis.download():
+				thesis.store_meta()
+				item_list.add(thesis)
+		except:
+			raise
 	return item_list
 
 
@@ -115,7 +132,8 @@ if __name__ == '__main__':
 		print ('Scraping', url)
 		response = requests.get(url)
 		new_items = extract(response.content.decode('utf-8'))
-		if not (new_items - thesis_set):
+		if new_items and not (new_items - thesis_set):
+			# if we got new items and they are all in the thesis set, then we stop
 			break
 		thesis_set |= new_items
 		page += 1
