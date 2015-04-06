@@ -26,5 +26,5 @@ end
 pdf_urls.each do |url|
   filename = OUTPUT_DIR + url.split("/")[-1]
   puts "Downloading #{url} to #{filename}"
-  File.write(filename, open(url))
+  File.write(filename, open(url).read) unless File.exist?(filename)
 end
