@@ -90,16 +90,16 @@ def extract_content(response_html):
 			continue
 		key = item.select('th')[0].get_text()
 		value = item.select('td')[0].get_text()
-		if 'URL do datoteke:' in key:
+		if 'URL do' in key:
 			thesis['url'] = value
-		if 'Naslov:' in key:
+		elif 'Naslov:' in key:
 			thesis['title'] = value
-		if 'Leto:' in key:
+		elif 'Leto:' in key:
 			thesis['year'] = value
-		if 'Avtor(ji):' in key:
+		elif 'Avtor(ji):' in key:
 			thesis['author'] = value.split(', ')[0]
-
-	if thesis.download():
+	
+	if 'url' in thesis and thesis.download():
 		thesis.store_meta()
 			
 if __name__ == '__main__':
