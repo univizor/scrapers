@@ -102,6 +102,7 @@ def extract_one(item):
 		return
 	org = meta.select('organizacija')[0]
 	if org['kratica'] in SKIP:
+		print 'Skipped', org['kratica']
 		return
 	org_text = org.get_text()
 	thesis['year'] = meta.select('letoizida')[0].get_text()
