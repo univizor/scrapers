@@ -97,7 +97,8 @@ def extract_one(item):
 	thesis_type = meta.select('vrstagradiva')
 	if not thesis_type:
 		return
-	if 'delo/naloga' not in thesis_type[0].get_text():
+	thesis_type = thesis_type[0].get_text()
+	if 'delo/naloga' not in thesis_type and ' delo' not in thesis_type:
 		return
 	org = meta.select('organizacija')[0]
 	if org['kratica'] in SKIP:
