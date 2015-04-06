@@ -62,7 +62,6 @@ class Thesis(dict):
 		p.communicate()
 		if p.returncode > 0:
 			print out
-			exit(1)
 
 def extract_links(response_html):
 	url_list = set()
