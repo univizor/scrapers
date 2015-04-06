@@ -20,9 +20,10 @@ DL_DIR = './docs/'
 #DL_DIR = '/mnt/univizor/download/'
 
 SKIP = (
-	'FRI',
-	'PEF',
-	'FGG',
+	'FRI', # FRI
+	'PEF', # Pedagoska
+	'FGG', # Gradbenistvo
+	'FFA', # Farmacija
 )
 
 class Thesis(dict):
