@@ -15,5 +15,6 @@ if __name__ == '__main__':
 			try:
 				eprints.extract(thesis_url, 'FGG', 'UL, Fakulteta za gradbenistvo in geodezijo')
 			except:
-				raise
+				print ('Url faild, fix manually: ', thesis_url)
+				pass # continue if there are errors
 
