@@ -123,7 +123,6 @@ def extract(sid, leto, vrsta, udk):
 	})
 	soup = bs4.BeautifulSoup(resp.content.decode('utf-8'))
 	content_found = False
-	print [ th.get_text() for th in  soup.select('#nolist-full tr th') ]
 	for row in soup.select('#nolist-full tr'):
 		content_found = True
 		columns = row.select('td')
@@ -142,22 +141,21 @@ def extract(sid, leto, vrsta, udk):
 			thesis['title'] = columns[4].get_text().split(' : ')[0]
 			thesis['url'] = columns[9].select('a')[0]['href']
 		print thesis
-		
-		
 	if not content_found:
 		sid = get_id()
 		print 'Retry', leto, vrsta, udk, 'with sid', sid
 		extract(sid, leto, vrsta, udk)
+	else:
+		return get_id(soup)
 
-def get_id():
-	resp = requests.post(URL_REQ, data={
+def get_id(soup=None):
+	soup = soup or bs4.BeautifulSoup(requests.post(URL_REQ, data={
 		'base': '99999',
 		'command': 'SEARCH',
 		'srch': 'test',
 		'x': '13',
 		'y': '9',
-	})
-	soup = bs4.BeautifulSoup(resp.content.decode('utf-8'))
+	}).content.decode('utf-8'))
 	for item in soup('input'):
 		if item['name'] == 'ID':
 			return item['value']
@@ -169,11 +167,12 @@ def iterate(args):
 	leto, vrsta, udk = 0, 0, 0
 	if args:
 		leto, vrsta, udk = LETOs.index(int(args[0])), VRSTAs.index(args[1]), UDKs.index(args[2])
-	first_id = get_id()
+	sid = get_id()
 	for l in LETOs[leto:]:
 		for v in first_itr and VRSTAs[vrsta:] or VRSTAs:
 			for u in first_itr and UDKs[udk:] or UDKs:
-				extract(first_id, l, v, u)
+				sid = extract(sid, l, v, u)
+				print sid
 				first_itr = False
 if __name__ == '__main__':
 	iterate(sys.argv[1:])
