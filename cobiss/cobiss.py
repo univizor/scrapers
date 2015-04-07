@@ -121,7 +121,33 @@ def extract(sid, leto, vrsta, udk):
 		'eac': '1',
 		'find': 'isci',	
 	})
-	print resp.content
+	soup = bs4.BeautifulSoup(resp.content.decode('utf-8'))
+	content_found = False
+	print [ th.get_text() for th in  soup.select('#nolist-full tr th') ]
+	for row in soup.select('#nolist-full tr'):
+		content_found = True
+		columns = row.select('td')
+		if not columns:
+			continue
+		try:
+			thesis = Thesis()
+			thesis.source = 'cobiss'
+			thesis['author'] = columns[2].get_text()
+			thesis['title'] = columns[3].get_text().split(' : ')[0]
+			thesis['url'] = columns[8].select('a')[0]['href']
+		except:
+			thesis = Thesis()
+			thesis.source = 'cobiss'
+			thesis['author'] = columns[3].get_text()
+			thesis['title'] = columns[4].get_text().split(' : ')[0]
+			thesis['url'] = columns[9].select('a')[0]['href']
+		print thesis
+		
+		
+	if not content_found:
+		sid = get_id()
+		print 'Retry', leto, vrsta, udk, 'with sid', sid
+		extract(sid, leto, vrsta, udk)
 
 def get_id():
 	resp = requests.post(URL_REQ, data={
@@ -147,7 +173,7 @@ def iterate(args):
 	for l in LETOs[leto:]:
 		for v in first_itr and VRSTAs[vrsta:] or VRSTAs:
 			for u in first_itr and UDKs[udk:] or UDKs:
-				links = extract(first_id, l, v, u)
+				extract(first_id, l, v, u)
 				first_itr = False
 if __name__ == '__main__':
 	iterate(sys.argv[1:])
