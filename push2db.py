@@ -14,7 +14,6 @@ import sys
 import os
 
 import MySQLdb as mdb
-
 import settings
 
 SQL_INSERT = u"INSERT INTO docDB (url, avtor, naslov, leto, fakulteta, data, filename) VALUES (%s, %s, %s, %s, %s, %s, '');"
