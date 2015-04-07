@@ -75,7 +75,6 @@ class Thesis(dict):
 		p.communicate()
 		if p.returncode > 0:
 			print out
-			exit(1)
 
 def extract_one(item):
 	thesis = Thesis()
