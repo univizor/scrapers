@@ -24,7 +24,7 @@ CMD_MIME = "fl=`file -bi %s | egrep -o '.*;'`; echo ${fl::-1}"
 DOC_DIR = sys.argv[1]
 
 def get_file(fname):
-	p = subprocess.Popen(CMD_MIME % (fname, ), shell=True, stdout=subprocess.PIPE)
+	p = subprocess.Popen(CMD_MIME % (fname, ), shell=True, executable='/bin/bash', stdout=subprocess.PIPE)
 	mimetype = p.stdout.read().strip()
 	p.communicate()
 	if p.returncode > 0:
