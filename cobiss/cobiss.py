@@ -146,7 +146,7 @@ def extract(sid, leto, vrsta, udk):
 	if not content_found:
 		sid = get_id()
 		print 'Retry ... '
-		extract(sid, leto, vrsta, udk)
+		return extract(sid, leto, vrsta, udk)
 	else:
 		return get_id(soup)
 
