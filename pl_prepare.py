@@ -46,7 +46,6 @@ def push(filename, source, url, author, title, year, school):
 	p.communicate()
 	if p.returncode > 0:
 		print out
-		exit(1)
 
 if __name__ == '__main__':
 	source = sys.argv[2]
