@@ -40,7 +40,12 @@ list_doc.css('input').each do |node|
   url = "geacollege-#{filename}"
 
   # insert into db (or update)
-  diploma = Diploma.find_by(url: url) || Diploma.new
+  diploma = Diploma.find_by(url: url)
+  if !diploma
+    diploma = Diploma.new
+    diploma.filename =''
+    diploma.save
+  end
   diploma.url = url
   diploma.filename = OUTPUT_DIR + diploma.id.to_s + ".pdf"
   diploma.naslov = ''
