@@ -12,7 +12,8 @@
 
 Dumping latest structure on production.
 
-    mysqldump -d -h $DB_HOST -u $DB_USER -p$DB_PASS $DB_NAME > $DB_NAME.sql
+    mysqldump -d -h $DB_HOST -u $DB_USER -p$DB_PASS $DB_NAME \
+    --skip-comments --skip-add-drop-table > $DB_NAME.sql
 
 Loading database localy.
 
