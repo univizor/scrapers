@@ -1,2 +1,4 @@
+*/*.pdf
+*/docs
 docs/
 *.pyc
