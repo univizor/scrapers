@@ -1,3 +1,5 @@
+# encoding: utf-8
+
 require 'open-uri'
 require 'nokogiri'
 require 'rest-client'
@@ -8,6 +10,7 @@ OUTPUT_DIR = '/mnt/univizor/download/gea/'
 url_root = "http://gea.gea-college.si/diplome/diplomska_dela_vsp_2009.aspx?studij=1"
 result = open(url_root)
 list_doc = Nokogiri.XML(result)
+list_doc.encoding = 'utf-8'
 form = list_doc.search('form')[0]
 
 params = {"__EVENTTARGET" => "", "__EVENTARGUMENT" => "", "__LASTFOCUS" => "", "Textbox1" => ""}
