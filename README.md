@@ -4,6 +4,21 @@
 
 # Installation
 
+## How to run scraper?
+
+1. ... write here dude!
+
+## Database
+
+Dumping latest structure on production.
+
+    mysqldump -d -h $DB_HOST -u $DB_USER -p$DB_PASS $DB_NAME \
+    --skip-comments --skip-add-drop-table > $DB_NAME.sql
+
+Loading database localy.
+
+    mysql -h <host> -u <username> -p < univizor.sql
+
 ## Python
 
     mkvirtualenv --no-site-packages univizor
