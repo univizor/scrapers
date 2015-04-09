@@ -1,17 +1,33 @@
 #!/usr/bin/env ruby
 
 %w{open-uri nokogiri}.each { |l| require l; }
-
-def is_dev?; Dir.exists?("/Users/otobrglez"); end
-def redownload?; ENV["REDOWNLOAD"] == "1"; end
+require_relative '../../converter/ruby/database.rb'
 
 ROOT_URL = "http://www.vsvo.si/images/pdf/"
+OUTPUT_DIR = ENV["UNIVIZOR_ENV"]=='development' ? './' : '/mnt/univizor/download/vsvo/'
 
-doc = Nokogiri::HTML open(ROOT_URL)
-urls = doc.xpath("//a").select {|a| a.content =~ /^.+diplomsk[oa].+\.pdf$/i }.map do |a|
+pairs = Nokogiri::HTML(open(ROOT_URL)).xpath("//a").select {|a| a.content =~ /^.+diplomsk[oa].+\.pdf$/i }.map do |a|
   timestamp, *url = *a["href"].split("_")
-  [timestamp, ROOT_URL + url.join("_")]
+  [Integer(timestamp[0,4]), ROOT_URL + a["href"]]
 end
 
+pairs.each do |year, url|
+  diploma = Diploma.find_or_initialize_by(url: url) do |d|
+    d.leto = year
+    d.filename = ''
+    d.fakulteta = 'Visoka šola za varstvo okolja (VŠVO)'
+  end
 
-puts urls.inspect
+  diploma.save
+
+  filename = OUTPUT_DIR + diploma.id.to_s + ".pdf"
+  diploma.update({filename: filename})
+
+  if !File.exist?(filename)
+    simple_name = url.split("/pdf/").last
+    puts "Getting #{simple_name} #{diploma.id} to #{filename}."
+    File.write(filename, open(url).read)
+  end
+
+  sleep 1
+end
