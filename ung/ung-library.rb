@@ -3,7 +3,7 @@ require 'open-uri'
 require_relative '../../converter/ruby/database.rb'
 
 DIRS = ['http://www.ung.si/~library/diplome/', 'http://www.ung.si/~library/doktorati/', 'http://www.ung.si/~library/magisterij/']
-OUTPUT_DIR = './docs/'
+OUTPUT_DIR = '/mnt/univizor/download/UNG/'
 
 pdf_urls = []
 
@@ -26,20 +26,34 @@ end
 
 pdf_urls.each do |url|
   filename = OUTPUT_DIR + url.split("/")[-1]
-  puts "Downloading #{url} to #{filename}"
-  
-  # save to disk
-  File.write(filename, open(url).read) unless File.exist?(filename)
+  puts "Processing #{url}"
   
   # insert into db (or update)
   diploma = Diploma.find_by(url: url) || Diploma.new
   diploma.url = url
-  diploma.filename = filename
-  diploma.converted_filename = filename
+  diploma.filename = OUTPUT_DIR + diploma.id.to_s + ".pdf"
   diploma.naslov = ''
   diploma.fakulteta = ''
   diploma.leto = ''
   diploma.data = ''
   diploma.avtor = ''
   diploma.save
+
+  # change filename
+  id_filename = OUTPUT_DIR + "#{diploma.id}.pdf"
+
+  # temporary, we don't want to redownload files
+  if File.exist?(filename) && !File.exist?(id_filename)
+    puts "Renaming #{filename} -> #{id_filename}"
+    File.rename(filename, id_filename)
+  end
+
+  # save to disk
+  if File.exist?(id_filename)
+    puts "SKIP writing #{id_filename}"
+  else
+    puts "writing #{id_filename}"
+    File.write(id_filename, open(url).read)
+  end
 end
+
