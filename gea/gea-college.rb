@@ -1,11 +1,14 @@
 # encoding: utf-8
 
+ENV["UNIVIZOR_ENV"] ||= "development"
+
 require 'open-uri'
 require 'nokogiri'
 require 'rest-client'
 require_relative '../../converter/ruby/database.rb'
 
-OUTPUT_DIR = '/mnt/univizor/download/gea/'
+OUTPUT_DIR = ENV["UNIVIZOR_ENV"]=='development' ? './' : '/mnt/univizor/download/gea/'
+
 REDOWNLOAD = false
 
 url_roots = {"dipl" => "http://gea.gea-college.si/diplome/diplomska_dela_vsp_2009.aspx?studij=1", "mag" => "http://gea.gea-college.si/diplome/diplomska_dela_vsp_2009.aspx?studij=4"}
@@ -61,7 +64,7 @@ url_roots.each do |degree, url_root|
     diploma.data = ''
     diploma.avtor = ''
     diploma.save
-   
+
     # change filename
     id_filename = OUTPUT_DIR + "#{diploma.id}.pdf"
 
@@ -74,7 +77,7 @@ url_roots.each do |degree, url_root|
       puts "writing #{id_filename}"
       File.write(id_filename, doc)
     end
-    
+
     sleep 1
   end
 end

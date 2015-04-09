@@ -2,13 +2,24 @@
 
 [List of all entities (Google Document)](https://docs.google.com/spreadsheets/d/1LdW-V_vTOMh38zqivm0EAIiUXhTjtd6kKb3iXUDRyto/edit#gid=0)
 
-| Entity      | Language | Owner      |
-|-------------|----------|------------|
-| [up](up/)   | Perl     | @igzebedze |
-| [mb](mb/)   | Perl     | @igzebedze |
-| [ung](ung/) | Perl     | @igzebedze |
-
 # Installation
+
+## How to run scraper?
+
+| Scraper       | Command
+|---------------|-----------------------------------------------------------
+| [vsvo](vsvo/) | `cd vsvo; ruby vsvo.rb > ./vsvo.log 2>&1`
+
+## Database
+
+Dumping latest structure on production.
+
+    mysqldump -d -h $DB_HOST -u $DB_USER -p$DB_PASS $DB_NAME \
+    --skip-comments --skip-add-drop-table > $DB_NAME.sql
+
+Loading database localy.
+
+    mysql -h <host> -u <username> -p < univizor.sql
 
 ## Python
 
