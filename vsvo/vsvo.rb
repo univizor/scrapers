@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+# encoding: utf-8
 
 %w{open-uri nokogiri}.each { |l| require l; }
 require_relative '../../converter/ruby/database.rb'
