@@ -9,6 +9,8 @@
 | Scraper       | Command
 |---------------|-----------------------------------------------------------
 | [vsvo](vsvo/) | `cd vsvo; ruby vsvo.rb > ./vsvo.log 2>&1`
+| [ung](ung/)   | `cd ung; ruby ung-library.rb > ./ung.log 2>&1`
+| [gea](gea/)   | `cd gea; ruby gea-college.rb > ./gea.log 2>&1`
 
 ## Database
 
