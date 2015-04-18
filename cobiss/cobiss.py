@@ -6,7 +6,7 @@ cobiss.py [LETO VRSTA UDK]
 """
 
 import sys, os, re, subprocess
-
+import urllib
 import requests
 import bs4
 from slugify import slugify
@@ -42,11 +42,21 @@ VRSTAs = [
 
 DL_DIR = os.environ.get('SCRAPER_TMP_DOC') or '/mnt/univizor/download/'
 
-LETOs = [
-	1980, 1981, 1982, 1983, 1984, 1985, 1986, 1987, 1988, 1989, 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015
-]
+LETOs = range(1980, 2016)
 
-UDKs = ['001', '002', '003', '004', '005', '006', '007', '008', '01', '015', '016', '02', '022', '023', '026', '027', '028', '030', '050', '06', '061', '069', '070', '09', '091', '093', '097', '1', '1', '1', '10', '11', '11', '11', '12', '13', '133', '14', '14', '14', '141', '15', '16', '16', '165', '17', '17', '18', '19', '2', '2', '2008', '2008', '2008', '2008', '2008', '2008', '2008', '2008', '2008', '2008', '2008', '2008', '2008', '2008', '2008', '2008', '2008', '2008', '2008', '21', '22', '23', '23', '24', '24', '25', '255', '257', '258', '259', '26', '27', '271', '272', '28', '29', '3', '3', '303', '304', '305', '305', '308', '311', '314', '316', '32', '321', '322', '323', '324', '325', '326', '327', '328', '329', '33', '330', '331', '332', '334', '336', '338', '339', '34', '341', '342', '343', '344', '346', '347', '348', '349', '35', '351', '352', '353', '354', '36', '364', '366', '368', '37', '371', '373', '374', '376', '377', '378', '39', '391', '392', '393', '393', '394', '394', '395', '396', '397', '398', '4', '5', '5', '502', '504', '51', '510', '511', '512', '514', '517', '52', '520', '521', '523', '524', '524', '528', '53', '531', '532', '533', '534', '535', '536', '536', '537', '539', '54', '542', '543', '544', '546', '547', '55', '552', '553', '556', '56', '57', '572', '574', '575', '576', '577', '578', '579', '58', '581', '582', '59', '591', '6', '60', '602', '604', '608', '61', '611', '612', '613', '614', '615', '616', '617', '618', '62', '621', '622', '623', '624', '625', '628', '629', '63', '630', '631', '632', '633', '635', '636', '637', '638', '639', '64', '640', '641', '654', '655', '656', '657', '658', '659', '66', '661', '662', '663', '664', '665', '666', '667', '669', '674', '675', '676', '677', '678', '681', '684', '687', '69', '69', '691', '691', '692', '692', '693', '694', '696', '697', '7', '7', '71', '71', '712', '719', '719', '719', '72', '72', '725', '726', '727', '728', '73', '730', '737', '74', '744', '746', '747', '75', '76', '766', '77', '778', '78', '781', '782', '782', '783', '783', '784', '784', '785', '785', '791', '792', '797', '798', '798', '799', '799', '8', '80', '808', '81', '811', '82', '821', '9', '902', '908', '91', '911', '912', '913', '929', '930']
+#3-101 - 3-128 - ul
+#3-201 - 3-222 - umb
+#3-301 - 3-303 - up
+#3-401 - 3-419  - others
+#3-500 - ung
+
+SCHOOLS = {
+	'UL': range(101, 129),
+	'UMB': range(201, 223),
+	'UP': range(301, 304),
+	'others': range(401, 420),
+	'UNG': [500]
+}
 
 EXTs = {
 	'application/pdf': 'pdf',
@@ -99,8 +109,8 @@ class Thesis(dict):
 		if p.returncode > 0:
 			print out
 
-def extract(sid, leto, vrsta, udk):
-	print 'Extracting links for', leto, vrsta, udk, 'with sid', sid
+def extract(sid, leto, vrsta, school):
+	print 'Extracting links for', leto, vrsta, school, 'with sid', sid
 	resp = requests.post(URL_SEARCH.format(sid), data={
 		'ukaz': 'SEAR',
 		'ID': sid,
@@ -111,8 +121,8 @@ def extract(sid, leto, vrsta, udk):
 		'PF2': 'CC',
 		'SS2': vrsta,
 		'OP2': 'AND',
-		'PF3': 'UC',
-		'SS3': '"' + udk + '"',
+		'PF3': 'FC',
+		'SS3': '"' + school + '"',
 		'OP3': 'AND',
 		'PF4': 'KW',
 		'SS4': '',
@@ -146,8 +156,17 @@ def extract(sid, leto, vrsta, udk):
 	if not content_found:
 		sid = get_id()
 		print 'Retry ... '
-		return extract(sid, leto, vrsta, udk)
+		return extract(sid, leto, vrsta, school)
 	else:
+		print soup.select('.content .nic9')#[2].get_text() #soup.select('.content .nic9 b')#[0].get_text()
+		# pages
+		url='http://cobiss4.izum.si/scripts/cobiss?ukaz=DIRE&' + urllib.urlencode({
+			'sid': sid,
+			'dfr': '', # 1, 11, 21 : page,
+			'pgg': '10',
+			'sid': '20',
+		})
+		print soup.select('.content .nic9')
 		return get_id(soup)
 
 def get_id(soup=None):
@@ -165,16 +184,23 @@ def get_id(soup=None):
 	
 
 def iterate(args):
+	SCHOOL_LIST = ['UL', 'UMB', 'UP', 'others', 'UNG']
 	first_itr = True
-	leto, vrsta, udk = 0, 0, 0
+	leto, vrsta = 0, 0
+	school1, school2 = 0, SCHOOLS['UL'][0]
 	if args:
-		leto, vrsta, udk = LETOs.index(int(args[0])), VRSTAs.index(args[1]), UDKs.index(args[2])
+		leto, vrsta, school1, school2 = LETOs.index(int(args[0])), VRSTAs.index(args[1]), SCHOOL_LIST.index(args[2]), SCHOOLS[args[2]].index(int(args[3]))
 	sid = get_id()
 	for l in LETOs[leto:]:
 		for v in first_itr and VRSTAs[vrsta:] or VRSTAs:
-			for u in first_itr and UDKs[udk:] or UDKs:
-				sid = extract(sid, l, v, u)
-				first_itr = False
+			for s1 in first_itr and SCHOOL_LIST[school1:] or SCHOOL_LIST:
+				for s2 in first_itr and SCHOOLS[s1][school2:] or SCHOOLS[s1]:
+					sid = extract(sid, l, v, '3-' + str(s2))
+					first_itr = False
+					
+			# for u in first_itr and UDKs[udk:] or UDKs:
+			# 	sid = extract(sid, l, v, u)
+			# 	first_itr = False
 if __name__ == '__main__':
 	iterate(sys.argv[1:])
 
