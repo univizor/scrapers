@@ -16,6 +16,7 @@ from slugify import slugify
 
 URL_REQ = 'http://www.cobiss.si/scripts/cobiss'
 URL_SEARCH = 'http://cobiss4.izum.si/scripts/cobiss?ukaz=SFRM&mode=5&id={}'
+URL_ADVSEARCH = 'http://cobiss6.izum.si/scripts/cobiss?ukaz=SFRM&id={}'
 
 VRSTA = {
 	'm': 'doktorska disertacija',
@@ -61,6 +62,33 @@ SCHOOLS = {
 EXTs = {
 	'application/pdf': 'pdf',
 }
+
+HEADERS = {
+	'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.118 Safari/537.36',
+	'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+	'Accept-Language': 'en-US,en;q=0.8,sl;q=0.6,en-GB;q=0.4,de;q=0.2',
+	'Accept-Encoding': 'gzip, deflate',
+	'Content-Type': 'application/x-www-form-urlencoded',
+	'Origin': 'http://cobiss6.izum.si',
+	'Cache-Control': 'max-age=0',
+}
+
+def pretty_print_POST(req):
+    """
+    At this point it is completely built and ready
+    to be fired; it is "prepared".
+
+    However pay attention at the formatting used in 
+    this function because it is programmed to be pretty 
+    printed and may differ from the actual request.
+    """
+    print('{}\n{}\n{}\n\n{}'.format(
+        '-----------START-----------',
+        req.method + ' ' + req.url,
+        '\n'.join('{}: {}'.format(k, v) for k, v in req.headers.items()),
+        req.body,
+    ))
+
 
 class Thesis(dict):
 	def __hash__(self):
@@ -111,26 +139,39 @@ class Thesis(dict):
 
 def extract(sid, leto, vrsta, school):
 	print 'Extracting links for', leto, vrsta, school, 'with sid', sid
-	resp = requests.post(URL_SEARCH.format(sid), data={
+
+	data = {
 		'ukaz': 'SEAR',
 		'ID': sid,
 		'keysbm': '',
+
 		'PF1': 'PY',
 		'SS1': leto,
 		'OP1': 'AND',
+
 		'PF2': 'CC',
-		'SS2': '"' + vrsta + '"',
+		'SS2': '"{}"'.format(vrsta),
 		'OP2': 'AND',
+
 		'PF3': 'FC',
-		'SS3': '"' + school + '"',
+		'SS3': '"{}"'.format(school),
 		'OP3': 'AND',
+
 		'PF4': 'KW',
 		'SS4': '',
-		'lan': 'slv',
+		'lan': '',
 		'mat': '51',
 		'eac': '1',
 		'find': 'isci',	
-	})
+	}
+
+	url = URL_SEARCH.format(sid)
+	data = 'ukaz=SEAR&ID={}&keysbm=&PF1=PY&SS1={}&OP1=AND&PF2=CC&SS2=%22{}%22&OP2=AND&PF3=FC&SS3=%22{}%22&OP3=AND&PF4=KW&SS4=&lan=&mat=51&eac=1&find=isci'.format(sid, leto, vrsta, school)
+	resp = requests.post(url, data=data, headers=HEADERS)
+	
+	with open('test.html', 'w') as fd:
+		fd.write(resp.content)
+	
 	soup = bs4.BeautifulSoup(resp.content)
 	content_found = False
 	for row in soup.select('#nolist-full tr'):
@@ -177,6 +218,9 @@ def extract(sid, leto, vrsta, school):
 		# print soup.select('.content .nic9')
 		return get_id(soup)
 
+def set_commands(sid):
+	return get_id(bs4.BeautifulSoup(requests.get(URL_ADVSEARCH.format(sid)).content))
+	
 def get_id(soup=None):
 	soup = soup or bs4.BeautifulSoup(requests.post(URL_REQ, data={
 		'base': '99999',
@@ -187,7 +231,7 @@ def get_id(soup=None):
 	}).content.decode('utf-8'))
 	for item in soup('input'):
 		if item['name'] == 'ID':
-			return item['value']
+			return soup and set_commands(item['value']) or item['value']
 	return None
 	
 
