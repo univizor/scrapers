@@ -138,6 +138,40 @@ class Thesis(dict):
 		if p.returncode > 0:
 			print out
 
+def find_content(soup, school):
+	content_found = False
+	for row in soup.select('#nolist-full tr'):
+		columns = row.select('td')
+		if not columns:
+			continue
+		content_found = True
+		try:
+			thesis = Thesis()
+			thesis['school'] = school
+			thesis.source = 'cobiss'
+			thesis['author'] = columns[2].get_text()
+			thesis['title'] = columns[3].get_text().split(' : ')[0]
+			thesis['url'] = columns[8].select('a')[0]['href']
+		except:
+			thesis = Thesis()
+			thesis.source = 'cobiss'
+			thesis['school'] = school
+			thesis['author'] = columns[3].get_text()
+			thesis['title'] = columns[4].get_text().split(' : ')[0]
+			thesis['url'] = columns[9].select('a')[0]['href']
+
+		if 'cobiss4.izum.si/scripts/cobiss' in thesis['url']:
+			continue
+		print thesis['url']
+	return content_found
+
+def get_school(soup, school_id):
+	for b in soup('b'):
+		b_text = b.get_text()
+		if school_id in b_text:
+			return b_text.split('(')[1][:-1]
+	return '[unknown]'
+
 def extract(sid, leto, vrsta, school):
 	print 'Extracting links for', leto, vrsta, school, 'with sid', sid
 
@@ -174,28 +208,9 @@ def extract(sid, leto, vrsta, school):
 		fd.write(resp.content)
 	
 	soup = bs4.BeautifulSoup(resp.content)
-	content_found = False
-	for row in soup.select('#nolist-full tr'):
-		content_found = True
-		columns = row.select('td')
-		if not columns:
-			continue
-		try:
-			thesis = Thesis()
-			thesis.source = 'cobiss'
-			thesis['author'] = columns[2].get_text()
-			thesis['title'] = columns[3].get_text().split(' : ')[0]
-			thesis['url'] = columns[8].select('a')[0]['href']
-		except:
-			thesis = Thesis()
-			thesis.source = 'cobiss'
-			thesis['author'] = columns[3].get_text()
-			thesis['title'] = columns[4].get_text().split(' : ')[0]
-			thesis['url'] = columns[9].select('a')[0]['href']
 
-		if 'cobiss4.izum.si/scripts/cobiss' in thesis['url']:
-			continue
-		print thesis['title']
+	school_name = get_school(soup, school)
+	content_found = find_content(soup, school_name)
 	try:
 		if 'tevilo najdenih zapisov: 0' in soup.select('body div.main div.iright b')[0].get_text():
 			print 'NIC ZADETKOV'
@@ -208,17 +223,24 @@ def extract(sid, leto, vrsta, school):
 		print 'Retry ... '
 		return extract(sid, leto, vrsta, school)
 	else:
-		#print soup.select('.content .nic9')#[2].get_text() #soup.select('.content .nic9 b')#[0].get_text()
-		# pages
-		url='http://cobiss4.izum.si/scripts/cobiss?ukaz=DIRE&' + urllib.urlencode({
-			'sid': sid,
-			'dfr': '', # 1, 11, 21 : page,
-			'pgg': '10',
-			'sid': '20',
-		})
-		# print soup.select('.content .nic9')
+		next_page(sid, school_name, 1)
 		return get_id(soup)
 
+def next_page(sid, school_name, page=1):
+	url='http://cobiss4.izum.si/scripts/cobiss?ukaz=DIRE&' + urllib.urlencode({
+		'id': sid,
+		'dfr': 1 + page * 10, # 1, 11, 21 : page,
+		'pgg': '10',
+		'sid': '20',
+	})
+	print 'page', sid, school_name, page, 'url:', url
+	resp = requests.get(url, headers=HEADERS)
+	soup = bs4.BeautifulSoup(resp.content)
+
+	content_found = find_content(soup, school_name)
+	if content_found:
+		next_page(sid, school_name, page + 1)
+	
 def get_id(soup=None):
 	if soup:
 		for item in soup('input'):
