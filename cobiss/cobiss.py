@@ -17,6 +17,7 @@ from slugify import slugify
 URL_REQ = 'http://www.cobiss.si/scripts/cobiss'
 URL_SEARCH = 'http://cobiss4.izum.si/scripts/cobiss?ukaz=SFRM&mode=5&id={}'
 URL_ADVSEARCH = 'http://cobiss6.izum.si/scripts/cobiss?ukaz=SFRM&id={}'
+URL_GETID = 'http://www.cobiss.si/scripts/cobiss?ukaz=getid&lani=si'
 
 VRSTA = {
 	'm': 'doktorska disertacija',
@@ -218,20 +219,17 @@ def extract(sid, leto, vrsta, school):
 		# print soup.select('.content .nic9')
 		return get_id(soup)
 
-def set_commands(sid):
-	return get_id(bs4.BeautifulSoup(requests.get(URL_ADVSEARCH.format(sid)).content))
-	
 def get_id(soup=None):
-	soup = soup or bs4.BeautifulSoup(requests.post(URL_REQ, data={
-		'base': '99999',
-		'command': 'SEARCH',
-		'srch': 'test',
-		'x': '13',
-		'y': '9',
-	}).content.decode('utf-8'))
-	for item in soup('input'):
-		if item['name'] == 'ID':
-			return soup and set_commands(item['value']) or item['value']
+	if soup:
+		for item in soup('input'):
+			if item['name'] == 'ID':
+				return item['value']
+	else:
+		soup = bs4.BeautifulSoup(requests.get(URL_GETID).content)
+		for a in soup('a'):
+			if a.get('title') == 'Iskanje':
+				url = a['href']
+				return get_id(bs4.BeautifulSoup(requests.get(url).content)) 
 	return None
 	
 
