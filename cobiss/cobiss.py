@@ -119,7 +119,7 @@ def extract(sid, leto, vrsta, school):
 		'SS1': leto,
 		'OP1': 'AND',
 		'PF2': 'CC',
-		'SS2': vrsta,
+		'SS2': '"' + vrsta + '"',
 		'OP2': 'AND',
 		'PF3': 'FC',
 		'SS3': '"' + school + '"',
@@ -131,7 +131,7 @@ def extract(sid, leto, vrsta, school):
 		'eac': '1',
 		'find': 'isci',	
 	})
-	soup = bs4.BeautifulSoup(resp.content.decode('utf-8'))
+	soup = bs4.BeautifulSoup(resp.content)
 	content_found = False
 	for row in soup.select('#nolist-full tr'):
 		content_found = True
@@ -153,12 +153,20 @@ def extract(sid, leto, vrsta, school):
 
 		if 'cobiss4.izum.si/scripts/cobiss' in thesis['url']:
 			continue
+		print thesis['title']
+	try:
+		if 'tevilo najdenih zapisov: 0' in soup.select('body div.main div.iright b')[0].get_text():
+			print 'NIC ZADETKOV'
+			return get_id(soup)
+	except:
+		pass
+	
 	if not content_found:
 		sid = get_id()
 		print 'Retry ... '
 		return extract(sid, leto, vrsta, school)
 	else:
-		print soup.select('.content .nic9')#[2].get_text() #soup.select('.content .nic9 b')#[0].get_text()
+		#print soup.select('.content .nic9')#[2].get_text() #soup.select('.content .nic9 b')#[0].get_text()
 		# pages
 		url='http://cobiss4.izum.si/scripts/cobiss?ukaz=DIRE&' + urllib.urlencode({
 			'sid': sid,
@@ -166,7 +174,7 @@ def extract(sid, leto, vrsta, school):
 			'pgg': '10',
 			'sid': '20',
 		})
-		print soup.select('.content .nic9')
+		# print soup.select('.content .nic9')
 		return get_id(soup)
 
 def get_id(soup=None):
