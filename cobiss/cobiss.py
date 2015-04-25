@@ -140,6 +140,28 @@ class Thesis(dict):
 
 def find_content(soup, school):
 	content_found = False
+	one_page = soup.select('#nolist-full')
+	if one_page and one_page[0].get('class', ['NO'])[0] == 'record':
+		thesis = Thesis()
+		thesis['school'] = school
+		thesis.source = 'cobiss'
+			
+		for tr in one_page[0].select('tr'):
+			th = tr.select('th')[0]
+			td = tr.select('td')[0]
+			col = th.get_text()
+			if col == 'Avtor':
+				thesis['author'] = td.get_text().strip()
+			if col == 'Naslov':
+				thesis['title'] = td.get_text().strip()
+			if col == 'URL':
+				try:
+					thesis['url'] = td.select('a')[0]['href']
+				except:
+					return True
+		print thesis['url'], thesis['school'], 
+		return True
+
 	for row in soup.select('#nolist-full tr'):
 		columns = row.select('td')
 		if not columns:
@@ -162,7 +184,7 @@ def find_content(soup, school):
 
 		if 'cobiss4.izum.si/scripts/cobiss' in thesis['url']:
 			continue
-		print thesis['url']
+		print thesis['url'], thesis['school']
 	return content_found
 
 def get_school(soup, school_id):
@@ -210,7 +232,9 @@ def extract(sid, leto, vrsta, school):
 	soup = bs4.BeautifulSoup(resp.content)
 
 	school_name = get_school(soup, school)
+
 	content_found = find_content(soup, school_name)
+
 	try:
 		if 'tevilo najdenih zapisov: 0' in soup.select('body div.main div.iright b')[0].get_text():
 			print 'NIC ZADETKOV'
@@ -223,7 +247,7 @@ def extract(sid, leto, vrsta, school):
 		print 'Retry ... '
 		return extract(sid, leto, vrsta, school)
 	else:
-		next_page(sid, school_name, 1)
+		#next_page(sid, school_name, 1)
 		return get_id(soup)
 
 def next_page(sid, school_name, page=1):
