@@ -103,17 +103,26 @@ class Thesis(dict):
 			ext
 		)
 
+	def force_download(self):
+		if '.pdf' not in self['url']:
+			return False
+		ext = self['url'].split('.')[-1]
+		local_filename = (DL_DIR + self.get_filename(ext))
+		self.filename = local_filename
+
+		if 'https://' in self['url']:
+			cmd = "curl -3 {} > {}".format(self['url'], local_filename)
+		else:
+			cmd = "curl {} > {}".format(self['url'], local_filename)
+		status = subprocess.call(cmd, shell=True)
+		return status == 0
+
 	def download(self):
 		try:
 			r = requests.get(self['url'], stream=True)
 		except requests.exceptions.SSLError:
 			self['url'] = self['url'].replace('http://', 'https://')
-			ext = self['url'].split('.')[-1]
-			local_filename = (DL_DIR + self.get_filename(ext))
-			self.filename = local_filename
-			cmd = "curl -3 {} > {}".format(self['url'], local_filename)
-			status = subprocess.call(cmd, shell=True)
-			return status == 0
+			return self.force_download()
 		try:
 			
 			ext = re.findall(r'filename=.*',
@@ -121,8 +130,7 @@ class Thesis(dict):
 		except:
 			ct = r.headers.get('content-type')
 			if ct not in EXTs:
-				print('Failed url:', self['url'])
-				return False
+				return self.force_download()
 			ext = EXTs[ct]
 		local_filename = (DL_DIR + self.get_filename(ext))
 		if os.path.exists(local_filename):
