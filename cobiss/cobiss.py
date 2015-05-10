@@ -11,6 +11,7 @@ import requests
 import bs4
 from slugify import slugify
 
+
 # http://cobiss4.izum.si/scripts/cobiss?ukaz=SFRM&mode=5&id=1504303287585446
 # http://home.izum.si/cobiss/obvestila_novosti/dokumenti/Dodatek_G.pdf
 
@@ -103,7 +104,16 @@ class Thesis(dict):
 		)
 
 	def download(self):
-		r = requests.get(self['url'], stream=True)
+		try:
+			r = requests.get(self['url'], stream=True)
+		except requests.exceptions.SSLError:
+			self['url'] = self['url'].replace('http://', 'https://')
+			ext = self['url'].split('.')[-1]
+			local_filename = (DL_DIR + self.get_filename(ext))
+			self.filename = local_filename
+			cmd = "curl -3 {} > {}".format(self['url'], local_filename)
+			status = subprocess.call(cmd, shell=True)
+			return status == 0
 		try:
 			
 			ext = re.findall(r'filename=.*',
@@ -138,12 +148,23 @@ class Thesis(dict):
 		if p.returncode > 0:
 			print out
 
-def find_content(soup, school):
+def store_and_download(thesis, retry=0):
+	if retry >= 3:
+		exit(1)
+	try:
+		if thesis.download():
+			thesis.store_meta()
+	except ValueError:
+		print 'Download failed for url (', retry, ')', thesis['url']
+		store_and_download(thesis, retry=(retry+1))
+			
+def find_content(soup, school, leto):
 	content_found = False
 	one_page = soup.select('#nolist-full')
 	if one_page and one_page[0].get('class', ['NO'])[0] == 'record':
 		thesis = Thesis()
 		thesis['school'] = school
+		thesis['year'] = leto
 		thesis.source = 'cobiss'
 			
 		for tr in one_page[0].select('tr'):
@@ -159,7 +180,8 @@ def find_content(soup, school):
 					thesis['url'] = td.select('a')[0]['href']
 				except:
 					return True
-		print thesis['url'], thesis['school'], 
+		print thesis['url'], thesis['school'],
+		store_and_download(thesis)
 		return True
 
 	for row in soup.select('#nolist-full tr'):
@@ -170,6 +192,7 @@ def find_content(soup, school):
 		try:
 			thesis = Thesis()
 			thesis['school'] = school
+			thesis['year'] = leto
 			thesis.source = 'cobiss'
 			thesis['author'] = columns[2].get_text()
 			thesis['title'] = columns[3].get_text().split(' : ')[0]
@@ -178,13 +201,14 @@ def find_content(soup, school):
 			thesis = Thesis()
 			thesis.source = 'cobiss'
 			thesis['school'] = school
+			thesis['year'] = leto
 			thesis['author'] = columns[3].get_text()
 			thesis['title'] = columns[4].get_text().split(' : ')[0]
 			thesis['url'] = columns[9].select('a')[0]['href']
 
 		if 'cobiss4.izum.si/scripts/cobiss' in thesis['url']:
 			continue
-		print thesis['url'], thesis['school']
+		store_and_download(thesis)
 	return content_found
 
 def get_school(soup, school_id):
@@ -194,8 +218,8 @@ def get_school(soup, school_id):
 			return b_text.split('(')[1][:-1]
 	return '[unknown]'
 
-def extract(sid, leto, vrsta, school):
-	print 'Extracting links for', leto, vrsta, school, 'with sid', sid
+def extract(sid, leto, vrsta, school, print_info='-'):
+	print 'Extracting links for', leto, vrsta, school, '({})'.format(print_info), 'with sid', sid
 
 	data = {
 		'ukaz': 'SEAR',
@@ -233,7 +257,7 @@ def extract(sid, leto, vrsta, school):
 
 	school_name = get_school(soup, school)
 
-	content_found = find_content(soup, school_name)
+	content_found = find_content(soup, school_name, leto)
 
 	try:
 		if 'tevilo najdenih zapisov: 0' in soup.select('body div.main div.iright b')[0].get_text():
@@ -245,12 +269,12 @@ def extract(sid, leto, vrsta, school):
 	if not content_found:
 		sid = get_id()
 		print 'Retry ... '
-		return extract(sid, leto, vrsta, school)
+		return extract(sid, leto, vrsta, school, print_info=print_info)
 	else:
-		#next_page(sid, school_name, 1)
+		next_page(sid, school_name, leto, 1)
 		return get_id(soup)
 
-def next_page(sid, school_name, page=1):
+def next_page(sid, school_name, leto, page=1):
 	url='http://cobiss4.izum.si/scripts/cobiss?ukaz=DIRE&' + urllib.urlencode({
 		'id': sid,
 		'dfr': 1 + page * 10, # 1, 11, 21 : page,
@@ -261,9 +285,9 @@ def next_page(sid, school_name, page=1):
 	resp = requests.get(url, headers=HEADERS)
 	soup = bs4.BeautifulSoup(resp.content)
 
-	content_found = find_content(soup, school_name)
+	content_found = find_content(soup, school_name, leto)
 	if content_found:
-		next_page(sid, school_name, page + 1)
+		next_page(sid, school_name, leto, page + 1)
 	
 def get_id(soup=None):
 	if soup:
@@ -291,7 +315,7 @@ def iterate(args):
 		for v in first_itr and VRSTAs[vrsta:] or VRSTAs:
 			for s1 in first_itr and SCHOOL_LIST[school1:] or SCHOOL_LIST:
 				for s2 in first_itr and SCHOOLS[s1][school2:] or SCHOOLS[s1]:
-					sid = extract(sid, l, v, '3-' + str(s2))
+					sid = extract(sid, l, v, '3-' + str(s2), print_info=s1)
 					first_itr = False
 					
 			# for u in first_itr and UDKs[udk:] or UDKs:
