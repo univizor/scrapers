@@ -111,9 +111,9 @@ class Thesis(dict):
 		self.filename = local_filename
 
 		if 'https://' in self['url']:
-			cmd = "curl -3 {} > {}".format(self['url'], local_filename)
+			cmd = "curl --max-time 300 -3 {} > {}".format(self['url'], local_filename)
 		else:
-			cmd = "curl {} > {}".format(self['url'], local_filename)
+			cmd = "curl --max-time 300 {} > {}".format(self['url'], local_filename)
 		status = subprocess.call(cmd, shell=True)
 		return status == 0
 
