@@ -6,16 +6,19 @@ cobiss.py [LETO VRSTA UDK]
 """
 
 import sys, os, re, subprocess
-
+import urllib
 import requests
 import bs4
 from slugify import slugify
+
 
 # http://cobiss4.izum.si/scripts/cobiss?ukaz=SFRM&mode=5&id=1504303287585446
 # http://home.izum.si/cobiss/obvestila_novosti/dokumenti/Dodatek_G.pdf
 
 URL_REQ = 'http://www.cobiss.si/scripts/cobiss'
 URL_SEARCH = 'http://cobiss4.izum.si/scripts/cobiss?ukaz=SFRM&mode=5&id={}'
+URL_ADVSEARCH = 'http://cobiss6.izum.si/scripts/cobiss?ukaz=SFRM&id={}'
+URL_GETID = 'http://www.cobiss.si/scripts/cobiss?ukaz=getid&lani=si'
 
 VRSTA = {
 	'm': 'doktorska disertacija',
@@ -42,15 +45,52 @@ VRSTAs = [
 
 DL_DIR = os.environ.get('SCRAPER_TMP_DOC') or '/mnt/univizor/download/'
 
-LETOs = [
-	1980, 1981, 1982, 1983, 1984, 1985, 1986, 1987, 1988, 1989, 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015
-]
+LETOs = range(1980, 2016)
 
-UDKs = ['001', '002', '003', '004', '005', '006', '007', '008', '01', '015', '016', '02', '022', '023', '026', '027', '028', '030', '050', '06', '061', '069', '070', '09', '091', '093', '097', '1', '1', '1', '10', '11', '11', '11', '12', '13', '133', '14', '14', '14', '141', '15', '16', '16', '165', '17', '17', '18', '19', '2', '2', '2008', '2008', '2008', '2008', '2008', '2008', '2008', '2008', '2008', '2008', '2008', '2008', '2008', '2008', '2008', '2008', '2008', '2008', '2008', '21', '22', '23', '23', '24', '24', '25', '255', '257', '258', '259', '26', '27', '271', '272', '28', '29', '3', '3', '303', '304', '305', '305', '308', '311', '314', '316', '32', '321', '322', '323', '324', '325', '326', '327', '328', '329', '33', '330', '331', '332', '334', '336', '338', '339', '34', '341', '342', '343', '344', '346', '347', '348', '349', '35', '351', '352', '353', '354', '36', '364', '366', '368', '37', '371', '373', '374', '376', '377', '378', '39', '391', '392', '393', '393', '394', '394', '395', '396', '397', '398', '4', '5', '5', '502', '504', '51', '510', '511', '512', '514', '517', '52', '520', '521', '523', '524', '524', '528', '53', '531', '532', '533', '534', '535', '536', '536', '537', '539', '54', '542', '543', '544', '546', '547', '55', '552', '553', '556', '56', '57', '572', '574', '575', '576', '577', '578', '579', '58', '581', '582', '59', '591', '6', '60', '602', '604', '608', '61', '611', '612', '613', '614', '615', '616', '617', '618', '62', '621', '622', '623', '624', '625', '628', '629', '63', '630', '631', '632', '633', '635', '636', '637', '638', '639', '64', '640', '641', '654', '655', '656', '657', '658', '659', '66', '661', '662', '663', '664', '665', '666', '667', '669', '674', '675', '676', '677', '678', '681', '684', '687', '69', '69', '691', '691', '692', '692', '693', '694', '696', '697', '7', '7', '71', '71', '712', '719', '719', '719', '72', '72', '725', '726', '727', '728', '73', '730', '737', '74', '744', '746', '747', '75', '76', '766', '77', '778', '78', '781', '782', '782', '783', '783', '784', '784', '785', '785', '791', '792', '797', '798', '798', '799', '799', '8', '80', '808', '81', '811', '82', '821', '9', '902', '908', '91', '911', '912', '913', '929', '930']
+#3-101 - 3-128 - ul
+#3-201 - 3-222 - umb
+#3-301 - 3-303 - up
+#3-401 - 3-419  - others
+#3-500 - ung
+
+SCHOOLS = {
+	'UL': range(101, 129),
+	'UMB': range(201, 223),
+	'UP': range(301, 304),
+	'others': range(401, 420),
+	'UNG': [500]
+}
 
 EXTs = {
 	'application/pdf': 'pdf',
 }
+
+HEADERS = {
+	'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.118 Safari/537.36',
+	'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+	'Accept-Language': 'en-US,en;q=0.8,sl;q=0.6,en-GB;q=0.4,de;q=0.2',
+	'Accept-Encoding': 'gzip, deflate',
+	'Content-Type': 'application/x-www-form-urlencoded',
+	'Origin': 'http://cobiss6.izum.si',
+	'Cache-Control': 'max-age=0',
+}
+
+def pretty_print_POST(req):
+    """
+    At this point it is completely built and ready
+    to be fired; it is "prepared".
+
+    However pay attention at the formatting used in 
+    this function because it is programmed to be pretty 
+    printed and may differ from the actual request.
+    """
+    print('{}\n{}\n{}\n\n{}'.format(
+        '-----------START-----------',
+        req.method + ' ' + req.url,
+        '\n'.join('{}: {}'.format(k, v) for k, v in req.headers.items()),
+        req.body,
+    ))
+
 
 class Thesis(dict):
 	def __hash__(self):
@@ -63,8 +103,26 @@ class Thesis(dict):
 			ext
 		)
 
+	def force_download(self):
+		if '.pdf' not in self['url']:
+			return False
+		ext = self['url'].split('.')[-1]
+		local_filename = (DL_DIR + self.get_filename(ext))
+		self.filename = local_filename
+
+		if 'https://' in self['url']:
+			cmd = "curl --max-time 300 -3 {} > {}".format(self['url'], local_filename)
+		else:
+			cmd = "curl --max-time 300 {} > {}".format(self['url'], local_filename)
+		status = subprocess.call(cmd, shell=True)
+		return status == 0
+
 	def download(self):
-		r = requests.get(self['url'], stream=True)
+		try:
+			r = requests.get(self['url'], stream=True)
+		except requests.exceptions.SSLError:
+			self['url'] = self['url'].replace('http://', 'https://')
+			return self.force_download()
 		try:
 			
 			ext = re.findall(r'filename=.*',
@@ -72,8 +130,7 @@ class Thesis(dict):
 		except:
 			ct = r.headers.get('content-type')
 			if ct not in EXTs:
-				print('Failed url:', self['url'])
-				return False
+				return self.force_download()
 			ext = EXTs[ct]
 		local_filename = (DL_DIR + self.get_filename(ext))
 		if os.path.exists(local_filename):
@@ -99,37 +156,51 @@ class Thesis(dict):
 		if p.returncode > 0:
 			print out
 
-def extract(sid, leto, vrsta, udk):
-	print 'Extracting links for', leto, vrsta, udk, 'with sid', sid
-	resp = requests.post(URL_SEARCH.format(sid), data={
-		'ukaz': 'SEAR',
-		'ID': sid,
-		'keysbm': '',
-		'PF1': 'PY',
-		'SS1': leto,
-		'OP1': 'AND',
-		'PF2': 'CC',
-		'SS2': vrsta,
-		'OP2': 'AND',
-		'PF3': 'UC',
-		'SS3': '"' + udk + '"',
-		'OP3': 'AND',
-		'PF4': 'KW',
-		'SS4': '',
-		'lan': 'slv',
-		'mat': '51',
-		'eac': '1',
-		'find': 'isci',	
-	})
-	soup = bs4.BeautifulSoup(resp.content.decode('utf-8'))
+def store_and_download(thesis, retry=0):
+	if retry >= 3:
+		exit(1)
+	try:
+		if thesis.download():
+			thesis.store_meta()
+	except ValueError:
+		print 'Download failed for url (', retry, ')', thesis['url']
+		store_and_download(thesis, retry=(retry+1))
+			
+def find_content(soup, school, leto):
 	content_found = False
+	one_page = soup.select('#nolist-full')
+	if one_page and one_page[0].get('class', ['NO'])[0] == 'record':
+		thesis = Thesis()
+		thesis['school'] = school
+		thesis['year'] = leto
+		thesis.source = 'cobiss'
+			
+		for tr in one_page[0].select('tr'):
+			th = tr.select('th')[0]
+			td = tr.select('td')[0]
+			col = th.get_text()
+			if col == 'Avtor':
+				thesis['author'] = td.get_text().strip()
+			if col == 'Naslov':
+				thesis['title'] = td.get_text().strip()
+			if col == 'URL':
+				try:
+					thesis['url'] = td.select('a')[0]['href']
+				except:
+					return True
+		print thesis['url'], thesis['school'],
+		store_and_download(thesis)
+		return True
+
 	for row in soup.select('#nolist-full tr'):
-		content_found = True
 		columns = row.select('td')
 		if not columns:
 			continue
+		content_found = True
 		try:
 			thesis = Thesis()
+			thesis['school'] = school
+			thesis['year'] = leto
 			thesis.source = 'cobiss'
 			thesis['author'] = columns[2].get_text()
 			thesis['title'] = columns[3].get_text().split(' : ')[0]
@@ -137,44 +208,127 @@ def extract(sid, leto, vrsta, udk):
 		except:
 			thesis = Thesis()
 			thesis.source = 'cobiss'
+			thesis['school'] = school
+			thesis['year'] = leto
 			thesis['author'] = columns[3].get_text()
 			thesis['title'] = columns[4].get_text().split(' : ')[0]
 			thesis['url'] = columns[9].select('a')[0]['href']
 
 		if 'cobiss4.izum.si/scripts/cobiss' in thesis['url']:
 			continue
+		store_and_download(thesis)
+	return content_found
+
+def get_school(soup, school_id):
+	for b in soup('b'):
+		b_text = b.get_text()
+		if school_id in b_text:
+			return b_text.split('(')[1][:-1]
+	return '[unknown]'
+
+def extract(sid, leto, vrsta, school, print_info='-'):
+	print 'Extracting links for', leto, vrsta, school, '({})'.format(print_info), 'with sid', sid
+
+	data = {
+		'ukaz': 'SEAR',
+		'ID': sid,
+		'keysbm': '',
+
+		'PF1': 'PY',
+		'SS1': leto,
+		'OP1': 'AND',
+
+		'PF2': 'CC',
+		'SS2': '"{}"'.format(vrsta),
+		'OP2': 'AND',
+
+		'PF3': 'FC',
+		'SS3': '"{}"'.format(school),
+		'OP3': 'AND',
+
+		'PF4': 'KW',
+		'SS4': '',
+		'lan': '',
+		'mat': '51',
+		'eac': '1',
+		'find': 'isci',	
+	}
+
+	url = URL_SEARCH.format(sid)
+	data = 'ukaz=SEAR&ID={}&keysbm=&PF1=PY&SS1={}&OP1=AND&PF2=CC&SS2=%22{}%22&OP2=AND&PF3=FC&SS3=%22{}%22&OP3=AND&PF4=KW&SS4=&lan=&mat=51&eac=1&find=isci'.format(sid, leto, vrsta, school)
+	resp = requests.post(url, data=data, headers=HEADERS)
+	
+	with open('test.html', 'w') as fd:
+		fd.write(resp.content)
+	
+	soup = bs4.BeautifulSoup(resp.content)
+
+	school_name = get_school(soup, school)
+
+	content_found = find_content(soup, school_name, leto)
+
+	try:
+		if 'tevilo najdenih zapisov: 0' in soup.select('body div.main div.iright b')[0].get_text():
+			print 'NIC ZADETKOV'
+			return get_id(soup)
+	except:
+		pass
+	
 	if not content_found:
 		sid = get_id()
 		print 'Retry ... '
-		return extract(sid, leto, vrsta, udk)
+		return extract(sid, leto, vrsta, school, print_info=print_info)
 	else:
+		next_page(sid, school_name, leto, 1)
 		return get_id(soup)
 
+def next_page(sid, school_name, leto, page=1):
+	url='http://cobiss4.izum.si/scripts/cobiss?ukaz=DIRE&' + urllib.urlencode({
+		'id': sid,
+		'dfr': 1 + page * 10, # 1, 11, 21 : page,
+		'pgg': '10',
+		'sid': '20',
+	})
+	print 'page', sid, school_name, page, 'url:', url
+	resp = requests.get(url, headers=HEADERS)
+	soup = bs4.BeautifulSoup(resp.content)
+
+	content_found = find_content(soup, school_name, leto)
+	if content_found:
+		next_page(sid, school_name, leto, page + 1)
+	
 def get_id(soup=None):
-	soup = soup or bs4.BeautifulSoup(requests.post(URL_REQ, data={
-		'base': '99999',
-		'command': 'SEARCH',
-		'srch': 'test',
-		'x': '13',
-		'y': '9',
-	}).content.decode('utf-8'))
-	for item in soup('input'):
-		if item['name'] == 'ID':
-			return item['value']
+	if soup:
+		for item in soup('input'):
+			if item['name'] == 'ID':
+				return item['value']
+	else:
+		soup = bs4.BeautifulSoup(requests.get(URL_GETID).content)
+		for a in soup('a'):
+			if a.get('title') == 'Iskanje':
+				url = a['href']
+				return get_id(bs4.BeautifulSoup(requests.get(url).content)) 
 	return None
 	
 
 def iterate(args):
+	SCHOOL_LIST = ['UL', 'UMB', 'UP', 'others', 'UNG']
 	first_itr = True
-	leto, vrsta, udk = 0, 0, 0
+	leto, vrsta = 0, 0
+	school1, school2 = 0, SCHOOLS['UL'][0]
 	if args:
-		leto, vrsta, udk = LETOs.index(int(args[0])), VRSTAs.index(args[1]), UDKs.index(args[2])
+		leto, vrsta, school1, school2 = LETOs.index(int(args[0])), VRSTAs.index(args[1]), SCHOOL_LIST.index(args[2]), SCHOOLS[args[2]].index(int(args[3]))
 	sid = get_id()
 	for l in LETOs[leto:]:
 		for v in first_itr and VRSTAs[vrsta:] or VRSTAs:
-			for u in first_itr and UDKs[udk:] or UDKs:
-				sid = extract(sid, l, v, u)
-				first_itr = False
+			for s1 in first_itr and SCHOOL_LIST[school1:] or SCHOOL_LIST:
+				for s2 in first_itr and SCHOOLS[s1][school2:] or SCHOOLS[s1]:
+					sid = extract(sid, l, v, '3-' + str(s2), print_info=s1)
+					first_itr = False
+					
+			# for u in first_itr and UDKs[udk:] or UDKs:
+			# 	sid = extract(sid, l, v, u)
+			# 	first_itr = False
 if __name__ == '__main__':
 	iterate(sys.argv[1:])
 
